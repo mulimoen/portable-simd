@@ -97,10 +97,8 @@ where
     #[inline]
     pub fn to_int(self) -> Simd<T, LANES> {
         unsafe {
-            let mask: <LaneCount<LANES> as SupportedLaneCount>::IntBitMask =
-                core::mem::transmute_copy(&self);
             crate::intrinsics::simd_select_bitmask(
-                mask,
+                self.0,
                 Simd::splat(T::TRUE),
                 Simd::splat(T::FALSE),
             )
@@ -109,14 +107,7 @@ where
 
     #[inline]
     pub unsafe fn from_int_unchecked(value: Simd<T, LANES>) -> Self {
-        // TODO remove the transmute when rustc is more flexible
-        assert_eq!(
-            core::mem::size_of::<<LaneCount::<LANES> as SupportedLaneCount>::BitMask>(),
-            core::mem::size_of::<<LaneCount::<LANES> as SupportedLaneCount>::IntBitMask>(),
-        );
-        let mask: <LaneCount<LANES> as SupportedLaneCount>::IntBitMask =
-            crate::intrinsics::simd_bitmask(value);
-        Self(core::mem::transmute_copy(&mask), PhantomData)
+        Self(crate::intrinsics::simd_bitmask(value), PhantomData)
     }
 
     #[cfg(feature = "generic_const_exprs")]

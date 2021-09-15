@@ -17,6 +17,7 @@ mod math;
 mod ops;
 mod round;
 mod select;
+mod swizzle;
 mod vector;
 mod vendor;
 
@@ -27,5 +28,6 @@ pub mod simd {
     pub use crate::core_simd::lane_count::{LaneCount, SupportedLaneCount};
     pub use crate::core_simd::masks::*;
     pub use crate::core_simd::select::Select;
+    pub use crate::core_simd::swizzle::*;
     pub use crate::core_simd::vector::*;
 }

@@ -1,6 +1,4 @@
 #[macro_use]
-mod permute;
-#[macro_use]
 mod reduction;
 
 pub(crate) mod intrinsics;

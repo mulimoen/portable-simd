@@ -1,3 +1,4 @@
+use crate::simd::intrinsics;
 use crate::{LaneCount, Simd, SimdElement, SupportedLaneCount};
 
 /// An index into one of two vectors.
@@ -26,7 +27,7 @@ pub trait Swizzle<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
         LaneCount<INPUT_LANES>: SupportedLaneCount,
         LaneCount<OUTPUT_LANES>: SupportedLaneCount,
     {
-        unsafe { crate::intrinsics::simd_shuffle(vector, vector, Self::INDEX_IMPL) }
+        unsafe { intrinsics::simd_shuffle(vector, vector, Self::INDEX_IMPL) }
     }
 }
 
@@ -51,7 +52,7 @@ pub trait Swizzle2<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
         LaneCount<INPUT_LANES>: SupportedLaneCount,
         LaneCount<OUTPUT_LANES>: SupportedLaneCount,
     {
-        unsafe { crate::intrinsics::simd_shuffle(first, second, Self::INDEX_IMPL) }
+        unsafe { intrinsics::simd_shuffle(first, second, Self::INDEX_IMPL) }
     }
 }
 

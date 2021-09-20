@@ -16,6 +16,7 @@ pub trait Swizzle<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
     const INDEX: [usize; OUTPUT_LANES];
 
     #[doc(hidden)]
+    /// The `simd_shuffle` intrinsic expects `u32`, so do error checking and conversion here.
     const INDEX_IMPL: [u32; OUTPUT_LANES] = check::<INPUT_LANES, OUTPUT_LANES>(Self::INDEX);
 
     /// Create a new vector from the lanes of `vector`.
@@ -37,6 +38,7 @@ pub trait Swizzle2<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
     const INDEX: [Which; OUTPUT_LANES];
 
     #[doc(hidden)]
+    /// The `simd_shuffle` intrinsic expects `u32`, so do error checking and conversion here.
     const INDEX_IMPL: [u32; OUTPUT_LANES] = check2::<INPUT_LANES, OUTPUT_LANES>(Self::INDEX);
 
     /// Create a new vector from the lanes of `first` and `second`.
@@ -56,6 +58,7 @@ pub trait Swizzle2<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
     }
 }
 
+/// Check that the input indices are valid, or panic.
 const fn check<const INPUT_LANES: usize, const OUTPUT_LANES: usize>(
     index: [usize; OUTPUT_LANES],
 ) -> [u32; OUTPUT_LANES] {
@@ -71,6 +74,7 @@ const fn check<const INPUT_LANES: usize, const OUTPUT_LANES: usize>(
     output
 }
 
+/// Check that the input indices are valid, or panic.
 const fn check2<const INPUT_LANES: usize, const OUTPUT_LANES: usize>(
     index: [Which; OUTPUT_LANES],
 ) -> [u32; OUTPUT_LANES] {

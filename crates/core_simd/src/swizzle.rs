@@ -15,10 +15,6 @@ pub trait Swizzle<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
     /// Map from the lanes of the input vector to the output vector.
     const INDEX: [usize; OUTPUT_LANES];
 
-    #[doc(hidden)]
-    /// The `simd_shuffle` intrinsic expects `u32`, so do error checking and conversion here.
-    const INDEX_IMPL: [u32; OUTPUT_LANES] = check::<INPUT_LANES, OUTPUT_LANES>(Self::INDEX);
-
     /// Create a new vector from the lanes of `vector`.
     ///
     /// Lane `i` of the output is `vector[Self::INDEX[i]]`.
@@ -37,10 +33,6 @@ pub trait Swizzle2<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
     /// Map from the lanes of the input vectors to the output vector
     const INDEX: [Which; OUTPUT_LANES];
 
-    #[doc(hidden)]
-    /// The `simd_shuffle` intrinsic expects `u32`, so do error checking and conversion here.
-    const INDEX_IMPL: [u32; OUTPUT_LANES] = check2::<INPUT_LANES, OUTPUT_LANES>(Self::INDEX);
-
     /// Create a new vector from the lanes of `first` and `second`.
     ///
     /// Lane `i` is `first[j]` when `Self::INDEX[i]` is `First(j)`, or `second[j]` when it is
@@ -58,42 +50,58 @@ pub trait Swizzle2<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
     }
 }
 
-/// Check that the input indices are valid, or panic.
-const fn check<const INPUT_LANES: usize, const OUTPUT_LANES: usize>(
-    index: [usize; OUTPUT_LANES],
-) -> [u32; OUTPUT_LANES] {
-    let mut output = [0; OUTPUT_LANES];
-    let mut i = 0;
-    while i < OUTPUT_LANES {
-        let index = index[i];
-        assert!(index as u32 as usize == index);
-        assert!(index < INPUT_LANES, "source lane exceeds input lane count",);
-        output[i] = index as u32;
-        i += 1;
-    }
-    output
+/// The `simd_shuffle` intrinsic expects `u32`, so do error checking and conversion here.
+trait SwizzleImpl<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
+    const INDEX_IMPL: [u32; OUTPUT_LANES];
 }
 
-/// Check that the input indices are valid, or panic.
-const fn check2<const INPUT_LANES: usize, const OUTPUT_LANES: usize>(
-    index: [Which; OUTPUT_LANES],
-) -> [u32; OUTPUT_LANES] {
-    let mut output = [0; OUTPUT_LANES];
-    let mut i = 0;
-    while i < OUTPUT_LANES {
-        let (offset, index) = match index[i] {
-            Which::First(index) => (false, index),
-            Which::Second(index) => (true, index),
-        };
-        assert!(index < INPUT_LANES, "source lane exceeds input lane count",);
+impl<T, const INPUT_LANES: usize, const OUTPUT_LANES: usize> SwizzleImpl<INPUT_LANES, OUTPUT_LANES>
+    for T
+where
+    T: Swizzle<INPUT_LANES, OUTPUT_LANES> + ?Sized,
+{
+    const INDEX_IMPL: [u32; OUTPUT_LANES] = {
+        let mut output = [0; OUTPUT_LANES];
+        let mut i = 0;
+        while i < OUTPUT_LANES {
+            let index = Self::INDEX[i];
+            assert!(index as u32 as usize == index);
+            assert!(index < INPUT_LANES, "source lane exceeds input lane count",);
+            output[i] = index as u32;
+            i += 1;
+        }
+        output
+    };
+}
 
-        // lanes are indexed by the first vector, then second vector
-        let index = if offset { index + INPUT_LANES } else { index };
-        assert!(index as u32 as usize == index);
-        output[i] = index as u32;
-        i += 1;
-    }
-    output
+/// The `simd_shuffle` intrinsic expects `u32`, so do error checking and conversion here.
+trait Swizzle2Impl<const INPUT_LANES: usize, const OUTPUT_LANES: usize> {
+    const INDEX_IMPL: [u32; OUTPUT_LANES];
+}
+
+impl<T, const INPUT_LANES: usize, const OUTPUT_LANES: usize> Swizzle2Impl<INPUT_LANES, OUTPUT_LANES>
+    for T
+where
+    T: Swizzle2<INPUT_LANES, OUTPUT_LANES> + ?Sized,
+{
+    const INDEX_IMPL: [u32; OUTPUT_LANES] = {
+        let mut output = [0; OUTPUT_LANES];
+        let mut i = 0;
+        while i < OUTPUT_LANES {
+            let (offset, index) = match Self::INDEX[i] {
+                Which::First(index) => (false, index),
+                Which::Second(index) => (true, index),
+            };
+            assert!(index < INPUT_LANES, "source lane exceeds input lane count",);
+
+            // lanes are indexed by the first vector, then second vector
+            let index = if offset { index + INPUT_LANES } else { index };
+            assert!(index as u32 as usize == index);
+            output[i] = index as u32;
+            i += 1;
+        }
+        output
+    };
 }
 
 impl<T, const LANES: usize> Simd<T, LANES>

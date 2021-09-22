@@ -2,6 +2,7 @@
 // Code ported from the `packed_simd` crate
 // Run this code with `cargo test --example matrix_inversion`
 #![feature(array_chunks, portable_simd)]
+use core_simd::Which::*;
 use core_simd::*;
 
 // Gotta define our own 4x4 matrix since Rust doesn't ship multidim arrays yet :^)
@@ -163,56 +164,21 @@ pub fn simd_inv4x4(m: Matrix4x4) -> Option<Matrix4x4> {
     let m_2 = f32x4::from_array(m[2]);
     let m_3 = f32x4::from_array(m[3]);
 
-    struct Swizzle01;
-    impl Swizzle2<4, 4> for Swizzle01 {
-        const INDEX: [Which; 4] = [
-            Which::First(0),
-            Which::First(1),
-            Which::Second(0),
-            Which::Second(1),
-        ];
-    }
+    const SHUFFLE01: [Which; 4] = [First(0), First(1), Second(0), Second(1)];
+    const SHUFFLE02: [Which; 4] = [First(0), First(2), Second(0), Second(2)];
+    const SHUFFLE13: [Which; 4] = [First(1), First(3), Second(1), Second(3)];
+    const SHUFFLE23: [Which; 4] = [First(2), First(3), Second(2), Second(3)];
 
-    struct Swizzle02;
-    impl Swizzle2<4, 4> for Swizzle02 {
-        const INDEX: [Which; 4] = [
-            Which::First(0),
-            Which::First(2),
-            Which::Second(0),
-            Which::Second(2),
-        ];
-    }
+    let tmp = simd_shuffle!(m_0, m_1, SHUFFLE01);
+    let row1 = simd_shuffle!(m_2, m_3, SHUFFLE01);
 
-    struct Swizzle13;
-    impl Swizzle2<4, 4> for Swizzle13 {
-        const INDEX: [Which; 4] = [
-            Which::First(1),
-            Which::First(3),
-            Which::Second(1),
-            Which::Second(3),
-        ];
-    }
+    let row0 = simd_shuffle!(tmp, row1, SHUFFLE02);
+    let row1 = simd_shuffle!(row1, tmp, SHUFFLE13);
 
-    struct Swizzle23;
-    impl Swizzle2<4, 4> for Swizzle23 {
-        const INDEX: [Which; 4] = [
-            Which::First(2),
-            Which::First(3),
-            Which::Second(2),
-            Which::Second(3),
-        ];
-    }
-
-    let tmp = Swizzle01::swizzle2(m_0, m_1);
-    let row1 = Swizzle01::swizzle2(m_2, m_3);
-
-    let row0 = Swizzle02::swizzle2(tmp, row1);
-    let row1 = Swizzle13::swizzle2(row1, tmp);
-
-    let tmp = Swizzle23::swizzle2(m_0, m_1);
-    let row3 = Swizzle23::swizzle2(m_2, m_3);
-    let row2 = Swizzle02::swizzle2(tmp, row3);
-    let row3 = Swizzle13::swizzle2(row3, tmp);
+    let tmp = simd_shuffle!(m_0, m_1, SHUFFLE23);
+    let row3 = simd_shuffle!(m_2, m_3, SHUFFLE23);
+    let row2 = simd_shuffle!(tmp, row3, SHUFFLE02);
+    let row3 = simd_shuffle!(row3, tmp, SHUFFLE13);
 
     let tmp = (row2 * row3).reverse().rotate_right::<2>();
     let minor0 = row1 * tmp;

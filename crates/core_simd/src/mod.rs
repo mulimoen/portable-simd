@@ -1,6 +1,9 @@
 #[macro_use]
 mod reduction;
 
+#[macro_use]
+mod swizzle;
+
 pub(crate) mod intrinsics;
 
 #[cfg(feature = "generic_const_exprs")]
@@ -15,7 +18,6 @@ mod math;
 mod ops;
 mod round;
 mod select;
-mod swizzle;
 mod vector;
 mod vendor;
 

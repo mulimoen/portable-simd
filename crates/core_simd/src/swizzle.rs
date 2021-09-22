@@ -1,6 +1,65 @@
 use crate::simd::intrinsics;
 use crate::{LaneCount, Simd, SimdElement, SupportedLaneCount};
 
+/// Rearrange vector elements.
+///
+/// A new vector is constructed by specifying the the lanes of the source vector or vectors to use.
+///
+/// When shuffling one vector, the indices of the result vector are indicated by a `const` array
+/// of `usize`, like [`Swizzle`].
+/// When shuffling two vectors, the indices are indicated by a `const` array of [`Which`], like
+/// [`Swizzle2`].
+///
+/// # Examples
+/// ## One source vector
+/// ```
+/// # #![feature(portable_simd)]
+/// # use core_simd::{Simd, simd_shuffle};
+/// let v = Simd::<f32, 4>::from_array([0., 1., 2., 3.]);
+/// let v = simd_shuffle!(v, [3, 0, 1, 2]);
+/// assert_eq!(v.to_array(), [3., 0., 1., 2.]);
+/// ```
+///
+/// ## Two source vectors
+/// ```
+/// # #![feature(portable_simd)]
+/// # use core_simd::{Simd, simd_shuffle, Which};
+/// use Which::*;
+/// let a = Simd::<f32, 4>::from_array([0., 1., 2., 3.]);
+/// let b = Simd::<f32, 4>::from_array([4., 5., 6., 7.]);
+/// let v = simd_shuffle!(a, b, [First(0), First(1), Second(2), Second(3)]);
+/// assert_eq!(v.to_array(), [0., 1., 6., 7.]);
+/// ```
+#[macro_export]
+macro_rules! simd_shuffle {
+    {
+        $vector:expr, $index:expr $(,)?
+    } => {
+        {
+            // FIXME this won't work when we are in `core`!
+            use $crate::Swizzle;
+            struct Shuffle;
+            impl Swizzle<{$index.len()}, {$index.len()}> for Shuffle {
+                const INDEX: [usize; {$index.len()}] = $index;
+            }
+            Shuffle::swizzle($vector)
+        }
+    };
+    {
+        $first:expr, $second:expr, $index:expr $(,)?
+    } => {
+        {
+            // FIXME this won't work when we are in `core`!
+            use $crate::{Which, Swizzle2};
+            struct Shuffle;
+            impl Swizzle2<{$index.len()}, {$index.len()}> for Shuffle {
+                const INDEX: [Which; {$index.len()}] = $index;
+            }
+            Shuffle::swizzle2($first, $second)
+        }
+    }
+}
+
 /// An index into one of two vectors.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Which {

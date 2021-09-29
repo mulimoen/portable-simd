@@ -49,8 +49,10 @@ where
         self.0
     }
 
-    /// SIMD gather: construct a SIMD vector by reading from a slice, using potentially discontiguous indices.
-    /// If an index is out of bounds, that lane instead selects the value from the "or" vector.
+    /// Reads from  potentially discontiguous indices in `slice` to construct a SIMD vector.
+    /// Lanes given an out-of-bounds index instead select values from the `or` vector.
+    ///
+    /// # Examples
     /// ```
     /// # #![feature(portable_simd)]
     /// # #[cfg(feature = "std")] use core_simd::Simd;
@@ -68,8 +70,10 @@ where
         Self::gather_select(slice, Mask::splat(true), idxs, or)
     }
 
-    /// SIMD gather: construct a SIMD vector by reading from a slice, using potentially discontiguous indices.
-    /// Out-of-bounds indices instead use the default value for that lane (0).
+    /// Reads from potentially discontiguous indices in `slice` to construct a SIMD vector.
+    /// Lanes given an out-of-bounds index instead are set the default value for the type.
+    ///
+    /// # Examples
     /// ```
     /// # #![feature(portable_simd)]
     /// # #[cfg(feature = "std")] use core_simd::Simd;
@@ -89,8 +93,10 @@ where
         Self::gather_or(slice, idxs, Self::splat(T::default()))
     }
 
-    /// SIMD gather: construct a SIMD vector by reading from a slice, using potentially discontiguous indices.
-    /// Out-of-bounds or masked indices instead select the value from the "or" vector.
+    /// Reads from potentially discontiguous indices in `slice` to construct a SIMD vector.
+    /// Lanes masked `false` or given an out-of-bounds index instead select values from the `or` vector.
+    ///
+    /// # Examples
     /// ```
     /// # #![feature(portable_simd)]
     /// # #[cfg(feature = "std")] use core_simd::{Simd, Mask};
@@ -116,9 +122,15 @@ where
         unsafe { Self::gather_select_unchecked(slice, mask, idxs, or) }
     }
 
-    /// Unsafe SIMD gather: construct a SIMD vector by reading from a slice, using potentially discontiguous indices.
-    /// Masked indices instead select the value from the "or" vector.
-    /// `gather_select_unchecked` is unsound if any unmasked index is out-of-bounds of the slice.
+    /// Reads from potentially discontiguous indices in `slice` to construct a SIMD vector.
+    /// Lanes masked `false` instead select values from the `or` vector.
+    ///
+    /// # Safety
+    ///
+    /// Calling this function with an out-of-bounds index that is masked `true` is *[undefined behavior]*
+    /// even if the resulting value is not used.
+    ///
+    /// # Examples
     /// ```
     /// # #![feature(portable_simd)]
     /// # #[cfg(feature = "std")] use core_simd::{Simd, Mask};
@@ -134,6 +146,7 @@ where
     /// let result = unsafe { Simd::gather_select_unchecked(&vec, mask, idxs, alt) };
     /// assert_eq!(result, Simd::from_array([-5, 13, 10, -2]));
     /// ```
+    /// [undefined behavior]: https://doc.rust-lang.org/reference/behavior-considered-undefined.html
     #[must_use]
     #[inline]
     pub unsafe fn gather_select_unchecked(
@@ -149,9 +162,12 @@ where
         unsafe { intrinsics::simd_gather(or, ptrs, mask.to_int()) }
     }
 
-    /// SIMD scatter: write a SIMD vector's values into a slice, using potentially discontiguous indices.
-    /// Out-of-bounds indices are not written.
-    /// `scatter` writes "in order", so if an index receives two writes, only the last is guaranteed.
+    /// Writes the values in a SIMD vector to  potentially discontiguous indices in `slice`.
+    /// Lanes masked `false` or given an out-of-bounds index are not written.
+    /// If two unmasked lanes in the scattered vector would write to the same index
+    /// only the last lane is guaranteed to actually be written.
+    ///
+    /// # Examples
     /// ```
     /// # #![feature(portable_simd)]
     /// # #[cfg(feature = "std")] use core_simd::Simd;
@@ -168,9 +184,12 @@ where
         self.scatter_select(slice, Mask::splat(true), idxs)
     }
 
-    /// SIMD scatter: write a SIMD vector's values into a slice, using potentially discontiguous indices.
-    /// Out-of-bounds or masked indices are not written.
-    /// `scatter_select` writes "in order", so if an index receives two writes, only the last is guaranteed.
+    /// Writes the values in a SIMD vector to multiple potentially discontiguous indices in `slice`.
+    /// Lanes masked `false` or given an out-of-bounds index are not written.
+    /// If two unmasked lanes in the scattered vector would write to the same index,
+    /// only the last lane is guaranteed to actually be written.
+    ///
+    /// # Examples
     /// ```
     /// # #![feature(portable_simd)]
     /// # #[cfg(feature = "std")] use core_simd::{Simd, Mask};
@@ -195,10 +214,17 @@ where
         unsafe { self.scatter_select_unchecked(slice, mask, idxs) }
     }
 
-    /// Unsafe SIMD scatter: write a SIMD vector's values into a slice, using potentially discontiguous indices.
-    /// Out-of-bounds or masked indices are not written.
-    /// `scatter_select_unchecked` is unsound if any unmasked index is out of bounds of the slice.
-    /// `scatter_select_unchecked` writes "in order", so if the same index receives two writes, only the last is guaranteed.
+    /// Writes the values in a SIMD vector to multiple potentially discontiguous indices in `slice`.
+    /// Lanes masked `false` are not written.
+    /// If two unmasked lanes in the scattered vector would write to the same index,
+    /// only the last lane is guaranteed to actually be written.
+    ///
+    /// # Safety
+    ///
+    /// Calling this function with an out-of-bounds index that is masked `true` is *[undefined behavior]*,
+    /// and may lead to memory corruption.
+    ///
+    /// # Examples
     /// ```
     /// # #![feature(portable_simd)]
     /// # #[cfg(feature = "std")] use core_simd::{Simd, Mask};
@@ -215,6 +241,7 @@ where
     /// // index 0's second write is masked, thus was omitted.
     /// assert_eq!(vec, vec![-41, 11, 12, 82, 14, 15, 16, 17, 18]);
     /// ```
+    /// [undefined behavior]: https://doc.rust-lang.org/reference/behavior-considered-undefined.html
     #[inline]
     pub unsafe fn scatter_select_unchecked(
         self,

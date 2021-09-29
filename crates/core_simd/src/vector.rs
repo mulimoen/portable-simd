@@ -24,6 +24,8 @@ where
     LaneCount<LANES>: SupportedLaneCount,
     T: SimdElement,
 {
+    const LANES: usize = LANES;
+
     /// Get the number of lanes in this vector.
     pub const fn lanes(&self) -> usize {
         LANES
